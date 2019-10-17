@@ -26,8 +26,14 @@
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <sys/mman.h>
-#include <arpa/inet.h>
+#ifdef __linux__ 
+	#include <arpa/inet.h> //for ntohl
+	#include <sys/mman.h>
+#elif _WIN32
+	#include <winsock2.h> //for ntohl
+	#include "windows/sys/mman.h"
+	#define mkdir(A, B) mkdir(A) //Function to create directory
+#endif
 
 #include <zlib.h>
 
@@ -477,11 +483,14 @@ static int proc_part_data_pkg_info(uint8_t *data, const uint32_t size,
 		       hdr->revision);
 	else
 		printf("Version   : %u.%u\n", hdr->ver_maj, hdr->ver_min);
-	gmtime_r((time_t *)&hdr->timestamp, &tm);
-	strftime(buf, sizeof(buf), "%c", &tm);
-	printf("Timestamp : %u (%s)\n", hdr->timestamp, buf);
-	printf("Unknown   : %s\n", array2str(hdr->unk_30, sizeof(hdr->unk_30)));
-
+	#ifdef __linux__ 
+		gmtime_r((time_t *)&hdr->timestamp, &tm);
+		strftime(buf, sizeof(buf), "%c", &tm);
+		printf("Timestamp : %u (%s)\n", hdr->timestamp, buf);
+	#elif _WIN32
+		printf("Windows doesn't have gmtime_r and I am to lazy to port it to windows :(");
+	#endif
+		printf("Unknown   : %s\n", array2str(hdr->unk_30, sizeof(hdr->unk_30)));
 	return 0;
 }
 
